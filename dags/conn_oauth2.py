@@ -40,7 +40,7 @@ print(response.content)
 def descargar_playlist(access_token):
 
     # URL de la API para obtener la playlist del usuario
-    url = "https://api.spotify.com/v1/me/tracks"
+    url = "https://api.spotify.com/v1/me/playlist"
 
     # Realizar la petición
     #headers = {"Authorization": f"Bearer {access_token}"}
