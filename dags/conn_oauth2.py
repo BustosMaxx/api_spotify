@@ -28,14 +28,8 @@ redirect_response = input('Pega la URL completa de redirección aquí: ')
 token = oauth.fetch_token(token_url, client_secret=client_secret,
                           authorization_response=redirect_response)
 
-list_id = "1hcdI2N1023RvSwLzTtdsp?si=MC2acqSwSamsMRjrUpVjwg"
-# URL de la API para obtener los elementos de la lista
-protected_url = f"https://api.spotify.com/v1/artists/{list_id}"
-# Hacer una solicitud autenticada
-response = oauth.get(protected_url)
-print(response.content)
-
-
+def imprimir_refresh_token(token):
+    print(token['refresh_token'])
 
 def descargar_playlist(access_token):
 
@@ -44,18 +38,13 @@ def descargar_playlist(access_token):
 
     # Realizar la petición
     #headers = {"Authorization": f"Bearer {access_token}"}
-    #response = requests.get(url, headers=headers)
+    # response = requests.get(url, headers=headers)
     response = oauth.get(url)
-
-    
-    # Mostrar código de respuesta
-    #print(response)
-    
+   
     # Mostrar los datos de la lista
     list_data = response.json()
     print(json.dumps(list_data, indent=2))
-    #json_data = json.dumps(list_data, indent=2)
 
 if __name__ == '__main__':
     print(token)
-    descargar_playlist(token)
+    imprimir_refresh_token(token)
