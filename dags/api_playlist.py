@@ -79,22 +79,25 @@ def transform(ti) -> list:
     artista = ti.xcom_pull(task_ids=["extract"])[0]
     
     # Mostrar los datos de la lista
-    list_data = artista
+    playlist = artista
+    playlist_list = []
+    for i in playlist['items']:
+        playlist_list.append(i)
+    
+    columnas = list(playlist['items'][0].keys())
+    playlist_df = pd.DataFrame(data = playlist_list, columns = columnas)
+    playlist_df.drop([ 'external_urls', 'href', 'images', 'primary_color',
+                       'snapshot_id', 'tracks', 'uri', 'owner'], axis=1, inplace = True)
    
-    return list_data
+    return playlist_df
 
 
 def load(ti):
-    list_data = ti.xcom_pull(task_ids=["transform"])[0]
+    df_data = ti.xcom_pull(task_ids=["transform"])[0]
     
-   # Mostrar los datos de la lista
-    json_data = json.dumps(list_data, indent=2)
-    print(json_data)
-
-    # Guardamos en un archivo en formato json
-    archi1 = open("datos.txt", "w", encoding="utf-8")
-    archi1.write(json_data)
-    archi1.close()
+   # Guardamos en un archivo en formato csv
+    df_data.to_csv('tabla_playlist.csv', index=False)
+    
 
 
 with DAG(
