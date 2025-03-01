@@ -79,6 +79,7 @@ def transform(ti) -> list:
     artista = ti.xcom_pull(task_ids=["extract"])[0]
     
     # Mostrar los datos de la lista
+
     playlist = artista
     playlist_list = []
     for i in playlist['items']:
