@@ -7,17 +7,23 @@ import base64
 from airflow.models.dag import DAG
 from airflow.providers.http.operators.http import HttpOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+# from airflow.providers.http.operators.http import HttpOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.operators.sql import SQLValueCheckOperator
+from airflow.utils.task_group import TaskGroup
 
-from conn_spotify import obtener_token
-# Información de tu aplicación (client_id y client_secret)
-# CLIENT_ID = 'ec33621b66a14a61b82980d29cb72a4f'
-# CLIENT_SECRET = '60d805e032644956920b52182685deb0'
-# global refresh_token
-# refresh_token = 'AQAn6pznVOcY2n97J-XxD6olKoMnd1EDbgLgFrudwu-GNxoqBeBnDonVSqrZhVaFIDvMuJDhrCQ4fT2X6-PbsiSpawVK58hc-rqpLUcsDauHfqVnPvXPe_OxdB7On71LWQ4'
-authorization_base_url = 'https://accounts.spotify.com/authorize?'
-token_url = 'https://accounts.spotify.com/api/token'
-redirect_uri = 'https://localhost-api/'
-scope = ['playlist-read-private', 'playlist-read-collaborative', 'user-library-read']
+
+# authorization_base_url = 'https://accounts.spotify.com/authorize?'
+# token_url = 'https://accounts.spotify.com/api/token'
+# redirect_uri = 'https://localhost-api/'
+# scope = ['playlist-read-private', 'playlist-read-collaborative', 'user-library-read']
+
+
+# AWS_CONN_ID = "aws_default"
+POSTGRES_CONN_ID = "postgres_default"
+# DATA_BUCKET_NAME = "pokemon-data"
+# OUTPUT_FN = 'pokemons_dataset.csv'
 
 def refresh_access_token():
     
@@ -90,15 +96,22 @@ def transform(ti) -> list:
     playlist_df.drop([ 'external_urls', 'href', 'images', 'primary_color',
                        'snapshot_id', 'tracks', 'uri', 'owner'], axis=1, inplace = True)
    
-    return playlist_df
+    playlist = playlist_df.to_dict()
+    return playlist
 
 
 def load(ti):
-    df_data = ti.xcom_pull(task_ids=["transform"])[0]
-    
+    playlist = ti.xcom_pull(task_ids=["transform"])[0]
+    df = pd.DataFrame(data=playlist)
    # Guardamos en un archivo en formato csv
-    df_data.to_csv('tabla_playlist.csv', index=False)
+    df.to_csv('tabla_playlist.csv', index=False)
     
+
+def load_to_remote_postgres(ti):
+   playlist = ti.xcom_pull(task_ids=["transform"])[0]
+   df = pd.DataFrame(data=playlist)
+   pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+   df.to_sql(name='spotify_data', con=pg_hook.get_sqlalchemy_engine(), if_exists='replace')
 
 
 with DAG(
@@ -123,4 +136,9 @@ with DAG(
        python_callable=load,
     )
 
-    extract >> transform >> load
+    load_to_remote_postgres = PythonOperator(
+       task_id='load_to_remote_postgres',
+       python_callable=load_to_remote_postgres,
+   )
+
+    extract >> transform >> [load, load_to_remote_postgres]

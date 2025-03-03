@@ -3,3 +3,4 @@ requests==2.31.0
 apache-airflow-providers-http
 requests_oauthlib
 Authlib
+astronomer-providers==1.17.3
